@@ -6,7 +6,7 @@
 //
 
 
-void main_1();
+void main_0();
 extern char *year,*month;
 void advance();
 
@@ -124,7 +124,7 @@ int main()
     }
     h = calculateDayOfWeek(year_1, month_1);
     printCalendar(year_1, month_1, h);
-    main_1();
+    main_0();
 
     return 0;
 }
