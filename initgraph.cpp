@@ -41,7 +41,7 @@ SDL_Window *win = nullptr;
 //渲染日期的函数
 void draw_day(char *days[42]);
 
-TTF_Font *font_1, *font_2, *font_3;
+TTF_Font *font_1, *font_2, *font_3,*font_4;
 SDL_Surface *txt_surf;
 
 
@@ -94,8 +94,15 @@ void *alarmClock(void *arg);
 
 SDL_Rect rect_one{1080, 520, 150, 70};
 SDL_Rect rect_tow{1260, 520, 150, 70};
+SDL_Rect rect_th{655, 500, 150, 70};
+int judge = 0;
+char set_time[80];
 
 void setalarm();
+
+void delete_alarm();
+
+void small_window();
 
 void advance() {
     initgraph();
@@ -148,6 +155,8 @@ void initgraph() {
     font_1 = TTF_OpenFont("C:/Windows/Fonts/STXINWEI.TTF", 60);
     font_2 = TTF_OpenFont("C:/Windows/Fonts/simfang.ttf", 30);
     font_3 = TTF_OpenFont("C:/Windows/Fonts/STXINWEI.TTF", 40);
+    font_4 = TTF_OpenFont("C:/Windows/Fonts/MISTRAL.TTF", 50);
+
     if (!font_1) {
         printf("ttf_font_error: %s", TTF_GetError());
 
@@ -197,7 +206,7 @@ void draw_background() {
         draw_font(font_1, week[i], i * 150 + 20, 120, color_1);
     }
 
-    //渲染日志
+    //渲染日志与闹钟
     draw_font(font_1, "日     程", 1145, 25, color_1);
     draw_font(font_2, "新建日程    删除日程", 1100, 140, color_1);
     SDL_RenderDrawLine(rdr, 1049, 500, 1440, 500);
@@ -210,6 +219,14 @@ void draw_background() {
         draw_font(font_3, time_0, 1097, 210, color_1);
         draw_font(font_2, title, 1130, 260, color_1);
     }
+
+    if (judge) {
+        SDL_Rect rect{1049, 599, 391, 102};
+        SDL_RenderDrawRect(rdr, &rect);
+        draw_font(font_3, set_time, 1060, 630, color_1);
+    }
+
+
 
 
 
@@ -228,6 +245,7 @@ int core() {
     skip:
         draw_background();
         draw_day(days);
+        draw_time();
         SDL_RenderPresent(rdr);
     while (1) {
         while (SDL_PollEvent(&event)) {
@@ -249,7 +267,7 @@ int core() {
                     //鼠标纵坐标event.motion.y
                     // break;
                     //监听鼠标按下事件
-                case SDL_MOUSEBUTTONDOWN:
+                case SDL_MOUSEBUTTONDOWN: {
                     //鼠标按下坐标event.button.x   event.button.y
                     //鼠标按下索引event.button.button
                     //鼠标点击次数event.button.clicks
@@ -263,19 +281,28 @@ int core() {
                     } else if (SDL_PointInRect(&pt, &rect_2) && strlen(journal) >= 4) {
                         //3.设置渲染颜色
                         SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
-
                         //4.清除屏幕(渲染屏幕背景)
                         SDL_RenderClear(rdr);
                         SDL_RenderPresent(rdr);
-
                         int x, y;
                         x = atoi(text_input(650, 0, 5));
                         y = atoi(text_input(580, 70, 6));
                         deleteLineFromFile("journal.txt", x, y);
                     } else if (SDL_PointInRect(&pt, &rect_one)) {
                         setalarm();
+                    } else if (SDL_PointInRect(&pt, &rect_tow)) {
+                        delete_alarm();
                     }
                     goto skip;
+                }
+                case SDL_MOUSEBUTTONUP: {
+                    pt = {event.button.x, event.button.y};
+                    if (SDL_PointInRect(&pt, &rect_th)) {
+                        delete_alarm();
+                    }
+                    goto skip;
+                }
+
                     //break;
                     //监听鼠标按下抬起事件
                     //case SDL_MOUSEBUTTONUP:
@@ -284,7 +311,7 @@ int core() {
                     //鼠标点击次数event.button.clicks
                     // break;
                     //监听键盘按下事件
-                    //case SDL_KEYDOWN:
+                //case SDL_KEYDOWN:
                     //物理编码event.key.keysym.sym
                     //虚拟编码event.key.keysym.scancode
 
@@ -323,7 +350,8 @@ void deinit() {
     SDL_DestroyTexture(img_texture);
     TTF_CloseFont(font_1);
     TTF_CloseFont(font_2);
-
+    TTF_CloseFont(font_3);
+    TTF_CloseFont(font_4);
     IMG_Quit();
     TTF_Quit();
     SDL_DestroyRenderer(rdr);
@@ -355,6 +383,8 @@ void play_wav() {
 
     //2.定义播放回调函数
     audio_spec.callback = callback;
+    small_window();
+
 
     //3.打开音频设备
     device_id = SDL_OpenAudioDevice(NULL, 0, &audio_spec, NULL, 0);
@@ -476,6 +506,7 @@ char *text_input(int x, int y, int choice) {
     }
 }
 
+int times = 1;
 char *journal_record() {
     //1.渲染背景
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
@@ -491,7 +522,8 @@ char *journal_record() {
     //2.记录时间与标题
     time_0 = text_input(520, 0, 3);
     title = text_input(330, 70, 4);
-    fprintf(file, "时间:%s\n", time_0);
+    fprintf(file, "%d.时间:%s\n", times,time_0);
+    times++;
     fprintf(file, "标题:%s\n", title);
     //3.重新渲染背景进行输入
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
@@ -540,7 +572,7 @@ char *journal_record() {
                     break;
                 case SDL_KEYDOWN:
                     if (event.key.keysym.sym == 1073741912) {
-                        fprintf(file, "内容:%s\n", text);
+                        fprintf(file, "内容:%s\n\n", text);
                         fclose(file);
                         return text;
                     }
@@ -618,12 +650,12 @@ void event_loop() {
                     return;
                 case SDL_KEYDOWN:
                     if (event.key.keysym.sym == 1073741912) return;
-//                case SDL_MOUSEBUTTONDOWN:
-//                    pt = {event.button.x, event.button.y};
-//                    SDL_Rect rect{1049, 199, 391, 400};
-//                    if (SDL_PointInRect(&pt, &rect)) {
-//                        return;
-//                    }
+
+                case SDL_MOUSEBUTTONDOWN:
+                    pt = {event.button.x, event.button.y};
+                    if (SDL_PointInRect(&pt, &rect_th)) {
+                        return;
+                    }
             }
         }
     }
@@ -716,12 +748,6 @@ void deleteLineFromFile(const char *filename, int lineToDelete, int lines) {
 
 void *alarmClock(void *arg) {
     struct tm *alarmTime = (struct tm *) arg;
-    printf("Year: %d\n", alarmTime->tm_year + 1900);
-    printf("Month: %d\n", alarmTime->tm_mon + 1);
-    printf("Day: %d\n", alarmTime->tm_mday);
-    printf("Hour: %d\n", alarmTime->tm_hour);
-    printf("Minute: %d\n", alarmTime->tm_min);
-    printf("Second: %d\n", alarmTime->tm_sec);
     time_t alarm = mktime(alarmTime);
     time_t currentTime;
 
@@ -729,15 +755,13 @@ void *alarmClock(void *arg) {
 //        time(&currentTime);
 //    } while (difftime(alarm, currentTime) > 0);
     time(&currentTime);
-    printf("Current time: %ld\n", currentTime);
-    printf("set time: %ld\n", alarm);
     double time = difftime(alarm, currentTime);
-    printf("%f", time);
     sleep(time);
     play_wav();
     pthread_exit(NULL);
 }
 
+pthread_t tid;
 void setalarm() {
     //3.设置渲染颜色
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
@@ -745,9 +769,10 @@ void setalarm() {
     //4.清除屏幕(渲染屏幕背景)
     SDL_RenderClear(rdr);
     SDL_RenderPresent(rdr);
+    judge = 1;
 
     int year_1, month_1, day, hours, minutes;
-    pthread_t tid;
+
     pthread_attr_t attr;
     year_1 = atoi(text_input(320, 0, 7));
     month_1 = atoi(text_input(320, 70, 8));
@@ -761,6 +786,7 @@ void setalarm() {
     alarmTime.tm_hour = hours;
     alarmTime.tm_min = minutes;
     alarmTime.tm_sec = 0;
+    strftime(set_time, 80, "%Y-%m-%d %H:%M:%S", &alarmTime);
 
     // 初始化线程属性对象
     pthread_attr_init(&attr);
@@ -768,6 +794,42 @@ void setalarm() {
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     // 创建线程并传递线程属性对象
     pthread_create(&tid, &attr, alarmClock, (void *) &alarmTime);
+    SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
+
+    //4.清除屏幕(渲染屏幕背景)
+    SDL_RenderClear(rdr);
+    draw_font(font_1,"设置完成!",590,300,color_1);
+    SDL_RenderPresent(rdr);
     sleep(1);
+
+}
+
+void delete_alarm()
+{
+    judge = 0;
+    pthread_cancel(tid);
+}
+
+void small_window()
+{
+
+    SDL_Surface* surface = IMG_Load("alarm.jpg");
+    if (surface == NULL) {
+        printf("Unable to load image %s! SDL_image Error: %s\n", "imagePath", IMG_GetError());
+    }
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(rdr, surface);
+    if (texture == NULL) {
+        printf("Unable to create texture from %s! SDL Error: %s\n", "imagePath", SDL_GetError());
+    }
+    SDL_FreeSurface(surface);
+    SDL_Rect rect0 = { 520, 200, 400, 400 };
+    SDL_Rect rect1 = { 200, 200, 700, 700 };
+    SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
+    SDL_RenderCopy(rdr, texture, &rect1, &rect0);
+    SDL_RenderDrawRect(rdr,&rect_th);
+    SDL_RenderDrawRect(rdr,&rect0);
+    draw_font(font_4,set_time,550,230,color_2);
+    draw_font(font_3,"取消",687,514,color_2);
+    SDL_RenderPresent(rdr);
 
 }
