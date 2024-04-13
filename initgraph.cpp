@@ -7,40 +7,37 @@
 #include <pthread.h>
 #include <unistd.h>
 
+//从main.cpp文件中获取相应月份的日期排布
 extern char *days[42];
 char *year, *month;
 
 //渲染日历表格,星期和年月的函数
 void draw_background();
-
 SDL_Texture *txt_texture;
 SDL_Texture *img_texture;
 
 //渲染字体函数
 void draw_font(TTF_Font *font, const char *text, int x, int y, SDL_Color color);
-
 SDL_Color color_1 = {};
 SDL_Color color_2 = {200, 0, 0, 255};
 
 
-//监听事件的函数
+//监听窗口事件的函数,主要控制整个主窗口的运行.
 int core();
 
 //销毁所有初始化的对象与内容释放缓存
 void deinit();
 
-//渲染时间的函数
+//渲染时间的函数(淘汰使用,性能堪忧)
 void draw_time();
 
 //初始化窗口的函数
 void initgraph();
-
 SDL_Renderer *rdr = nullptr;
 SDL_Window *win = nullptr;
 
-//渲染日期的函数
+//渲染具体日期的函数
 void draw_day(char *days[42]);
-
 TTF_Font *font_1, *font_2, *font_3,*font_4;
 SDL_Surface *txt_surf;
 
@@ -50,60 +47,67 @@ void callback(void *userdata, Uint8 *stream, int len);
 
 //播放闹铃的函数
 void play_wav();
-
 Uint8 *audio_buf;
 Uint32 audio_len;
 Uint32 audio_pos;
 SDL_AudioDeviceID device_id;
 
-//次主函数
+//次主函数,
 void main_0();
 
-//输入年月函数
-char *text_input(int x, int y, int choice);//y参数是文字显示的纵坐标,choice参数是年月的选择,1为年份,2为月份.
+//输入函数
+char *text_input(int x, int y, int choice);//y参数是文字显示的纵坐标,choice参数是年月的选择,1为输入年份,2为输入月份.
 
-//输入日程函数
+//记录日程函数
 char *journal_record();
-
 SDL_Rect rect_1{1080, 120, 150, 70};
 SDL_Rect rect_2{1260, 120, 150, 70};
 char *time_0 = "";
 char *journal = "";
 char *title = "";
 
+//渲染窗口背景函数
 void draw_img();
-
 SDL_Texture *loaded_texture = NULL;
 
+//预处理背景图片函数,优化性能
 void preload_img_texture(char *file);
-
+//清理背景图片的texture变量
 void cleanup_img_texture();
 
+//渲染具体日志函数
 void draw_journal();
 
+//监听窗口函数,主要用于一些弹窗,临时渲染的监听.
 void event_loop();
 
+//读取日记文件文本的所有内容(被draw_journal()函数调用)
 char *readEntireFile(const char *filename);
 
+//实现文本换行渲染功能(被draw_journal()函数调用)
 void renderTextWithNewline(SDL_Renderer *renderer, const char *text, int x, int y);
 
+//删除日记函数,输入要删除的文本起始行与要删除的行数(因为技术不足,所有日记都存储在一个文本中,无法做到删除一个日志,只能选择要删除的行)
 void deleteLineFromFile(const char *filename, int lineToDelete, int lines);
 
-
+//闹钟响铃函数,到了设置时间开始响铃
 void *alarmClock(void *arg);
-
 SDL_Rect rect_one{1080, 520, 150, 70};
 SDL_Rect rect_tow{1260, 520, 150, 70};
 SDL_Rect rect_th{655, 500, 150, 70};
 int judge = 0;
 char set_time[80];
 
+//设置闹钟函数,设置闹钟时间
 void setalarm();
 
+//删除闹钟函数
 void delete_alarm();
 
+//闹钟弹窗函数,到了设置时间,出现响铃的弹窗
 void small_window();
 
+//现行函数(将部分函数封装,便于避免bug和修改),通过调用其他功能函数,实现查询输入.
 void advance() {
     initgraph();
     preload_img_texture("loong.png");
@@ -113,8 +117,8 @@ void advance() {
 
 }
 
+//主调函数,调用最主要的core函数
 void main_0() {
-
 
     core();
 
@@ -145,7 +149,7 @@ void initgraph() {
     SDL_RenderClear(rdr);
     SDL_RenderPresent(rdr);
 
-    //1.初始化TTF
+    //1.初始化字体TTF
     if (TTF_Init() < 0) {
         printf("ttf_init_error: %s", TTF_GetError());
 
@@ -157,6 +161,7 @@ void initgraph() {
     font_3 = TTF_OpenFont("C:/Windows/Fonts/STXINWEI.TTF", 40);
     font_4 = TTF_OpenFont("C:/Windows/Fonts/MISTRAL.TTF", 50);
 
+    //判断字体是否打开成功
     if (!font_1) {
         printf("ttf_font_error: %s", TTF_GetError());
 
@@ -167,14 +172,14 @@ void initgraph() {
 }
 
 
-//渲染呈现函数
+//渲染整体主窗口函数
 void draw_background() {
-    //1.创建与窗口关联的渲染器
 
+    //渲染背景图
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
     SDL_RenderClear(rdr);
     draw_img();
-    //5.渲染表格
+    //2.渲染表格
     SDL_SetRenderDrawColor(rdr, 0, 0, 0, 255);
     for (int i = 0; i <= 6; i++) {
 
@@ -183,30 +188,24 @@ void draw_background() {
             SDL_RenderDrawRect(rdr, &rect);
         }
     }
-//**渲染文字
+    //3.渲染文字
     char *week[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     char header[20];
     sprintf(header, "%s年    %s月", year, month);
 
-    //渲染年月
-    draw_font(font_1, header, 100, 30, color_1);
+    //3.1渲染年月
+    draw_font(font_1, header, 380, 30, color_1);
     SDL_RenderDrawLine(rdr, 1049, 0, 1049, 100);
     SDL_RenderDrawLine(rdr, 1049, 100, 1440, 100);
-
     SDL_RenderDrawRect(rdr, &rect_1);
-
     SDL_RenderDrawRect(rdr, &rect_2);
 
-
-
-
-
-    //渲染星期
+    //3.2渲染星期
     for (int i = 0; i < 7; i++) {
         draw_font(font_1, week[i], i * 150 + 20, 120, color_1);
     }
 
-    //渲染日志与闹钟
+    //3.3渲染日志与闹钟
     draw_font(font_1, "日     程", 1145, 25, color_1);
     draw_font(font_2, "新建日程    删除日程", 1100, 140, color_1);
     SDL_RenderDrawLine(rdr, 1049, 500, 1440, 500);
@@ -219,54 +218,31 @@ void draw_background() {
         draw_font(font_3, time_0, 1097, 210, color_1);
         draw_font(font_2, title, 1130, 260, color_1);
     }
-
     if (judge) {
         SDL_Rect rect{1049, 599, 391, 102};
         SDL_RenderDrawRect(rdr, &rect);
         draw_font(font_3, set_time, 1060, 630, color_1);
     }
 
-
-
-
-
-
-    //4.渲染呈现
-//    SDL_RenderPresent(rdr);
 }
 
 
-//事件监听
+//事件监听函数的定义
 int core() {
     SDL_Event event;
     SDL_Point pt;
-
-
     skip:
-        draw_background();
-        draw_day(days);
-        draw_time();
-        SDL_RenderPresent(rdr);
+    draw_background();
+    draw_day(days);
+//    draw_time();
+    SDL_RenderPresent(rdr);
     while (1) {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 //监听退出事件
                 case SDL_QUIT:
                     return 1;
-
-                    //监听窗口事件
-//                case SDL_WINDOWEVENT:
-//                    if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)//窗口大小改变事件
-//                    {
-//                        goto name;
-//                    }
-
-                    //监听鼠标移动事件
-                    //case SDL_MOUSEMOTION:
-                    //鼠标横坐标event.motion.x
-                    //鼠标纵坐标event.motion.y
-                    // break;
-                    //监听鼠标按下事件
+                //监听鼠标按下事件
                 case SDL_MOUSEBUTTONDOWN: {
                     //鼠标按下坐标event.button.x   event.button.y
                     //鼠标按下索引event.button.button
@@ -303,36 +279,6 @@ int core() {
                     goto skip;
                 }
 
-                    //break;
-                    //监听鼠标按下抬起事件
-                    //case SDL_MOUSEBUTTONUP:
-                    //鼠标抬起坐标event.button.x   event.button.y
-                    //鼠标抬起索引event.button.button
-                    //鼠标点击次数event.button.clicks
-                    // break;
-                    //监听键盘按下事件
-                //case SDL_KEYDOWN:
-                    //物理编码event.key.keysym.sym
-                    //虚拟编码event.key.keysym.scancode
-
-                    //break;
-
-                    //监听键盘抬起事件
-                    //case SDL_KEYUP:
-                    //物理编码event.key.keysym.sym
-                    // 虚拟编码event.key.keysym.scancode
-                    //break;
-
-
-                    //case SDL_TEXTEDITING:
-                    //break;
-                    //case SDL_TEXTINPUT:
-
-
-
-
-
-
             }
 
         }
@@ -340,7 +286,7 @@ int core() {
     }
 }
 
-//销毁窗口
+//销毁缓存
 void deinit() {
 
 
@@ -373,7 +319,7 @@ void callback(void *userdata, Uint8 *stream, int len) {
 }
 
 
-//播放声音
+//播放声音函数
 void play_wav() {
     SDL_AudioSpec audio_spec;
     //1.导入WAV文件
@@ -397,9 +343,8 @@ void play_wav() {
     SDL_CloseAudioDevice(device_id);
 }
 
-//显示日期文字
+//渲染日期函数的定义
 void draw_day(char *days[35]) {
-    //3.渲染字体
     for (int i = 0, j = 0, y = 200; i < 42; i++, j++) {
         if (j == 7) {
             j = 0;
@@ -412,12 +357,9 @@ void draw_day(char *days[35]) {
         }
 
     }
-
-    //7.释放与销毁资源
-
-
 }
 
+//渲染时间函数的定义
 void draw_time() {
     time_t current_time = time(NULL);
     struct tm *timeinfo = localtime(&current_time);
@@ -427,6 +369,8 @@ void draw_time() {
 
 }
 
+
+//渲染字体函数的定义,形参为字体,文本,渲染位置,渲染颜色(多被调用)
 void draw_font(TTF_Font *font, const char *text, int x, int y, SDL_Color color) {
     txt_surf = TTF_RenderUTF8_Blended(font, text, {color});
     txt_texture = SDL_CreateTextureFromSurface(rdr, txt_surf);
@@ -435,12 +379,11 @@ void draw_font(TTF_Font *font, const char *text, int x, int y, SDL_Color color) 
 }
 
 
+//文本输入函数的定义,形参为横坐标,纵坐标,选择输入类型(多被调用)
 char *text_input(int x, int y, int choice) {
     SDL_Event event;
     char *text_0;
-
     char *text = (char *) malloc(40 * sizeof(char));
-
     SDL_SetRenderDrawColor(rdr, 0, 0, 0, 255);
     switch (choice) {
         case 1:
@@ -507,6 +450,7 @@ char *text_input(int x, int y, int choice) {
 }
 
 int times = 1;
+//日记记录函数的定义,将输入的文本内容写入日记文件
 char *journal_record() {
     //1.渲染背景
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
@@ -535,7 +479,6 @@ char *journal_record() {
     }
 
     SDL_RenderPresent(rdr);
-
 
     SDL_Event event;
     char *text_0;
@@ -572,7 +515,7 @@ char *journal_record() {
                     break;
                 case SDL_KEYDOWN:
                     if (event.key.keysym.sym == 1073741912) {
-                        fprintf(file, "内容:%s\n\n", text);
+                        fprintf(file, "内容:%s\n \n", text);
                         fclose(file);
                         return text;
                     }
@@ -586,7 +529,7 @@ char *journal_record() {
     }
 }
 
-// 全局变量或者存储在某个合适的数据结构中
+
 
 void preload_img_texture(char *file) {
 // 如果已经加载了纹理，先销毁之前的纹理
@@ -624,6 +567,7 @@ void cleanup_img_texture() {
     }
 }
 
+//渲染具体日记函数的定义,读取文件文本,将其渲染呈现
 void draw_journal() {
     char *text = readEntireFile("journal.txt");
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
@@ -639,6 +583,7 @@ void draw_journal() {
     event_loop();
 }
 
+//事件监听函数的定义,当点击退出,按下回车,点击取消时结束监听
 void event_loop() {
     SDL_Event event;
     SDL_Point pt;
@@ -754,6 +699,7 @@ void *alarmClock(void *arg) {
 //    do {
 //        time(&currentTime);
 //    } while (difftime(alarm, currentTime) > 0);
+//******重点优化*****
     time(&currentTime);
     double time = difftime(alarm, currentTime);
     sleep(time);
@@ -761,6 +707,8 @@ void *alarmClock(void *arg) {
     pthread_exit(NULL);
 }
 
+//设置闹钟函数的定义,此函数中创建了一个新线程,在主线程进行的同时可以判定时间播放闹钟
+//***重点***
 pthread_t tid;
 void setalarm() {
     //3.设置渲染颜色
@@ -787,7 +735,6 @@ void setalarm() {
     alarmTime.tm_min = minutes;
     alarmTime.tm_sec = 0;
     strftime(set_time, 80, "%Y-%m-%d %H:%M:%S", &alarmTime);
-
     // 初始化线程属性对象
     pthread_attr_init(&attr);
     // 设置线程属性为分离状态
@@ -800,6 +747,7 @@ void setalarm() {
     SDL_RenderClear(rdr);
     draw_font(font_1,"设置完成!",590,300,color_1);
     SDL_RenderPresent(rdr);
+    //***困难之一***
     sleep(1);
 
 }
@@ -812,23 +760,25 @@ void delete_alarm()
 
 void small_window()
 {
-
-    SDL_Surface* surface = IMG_Load("alarm.jpg");
-    if (surface == NULL) {
-        printf("Unable to load image %s! SDL_image Error: %s\n", "imagePath", IMG_GetError());
-    }
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(rdr, surface);
-    if (texture == NULL) {
-        printf("Unable to create texture from %s! SDL Error: %s\n", "imagePath", SDL_GetError());
-    }
-    SDL_FreeSurface(surface);
+//以下注释内容为渲染弹窗背景内容,没有好的想法,暂时搁置,弹窗还是用简约风
+//    SDL_Surface* surface = IMG_Load("alarm.jpg");
+//    if (surface == NULL) {
+//        printf("Unable to load image %s! SDL_image Error: %s\n", "imagePath", IMG_GetError());
+//    }
+//    SDL_Texture* texture = SDL_CreateTextureFromSurface(rdr, surface);
+//    if (texture == NULL) {
+//        printf("Unable to create texture from %s! SDL Error: %s\n", "imagePath", SDL_GetError());
+//    }
+//    SDL_FreeSurface(surface);
     SDL_Rect rect0 = { 520, 200, 400, 400 };
-    SDL_Rect rect1 = { 200, 200, 700, 700 };
+//    SDL_Rect rect1 = { 200, 200, 700, 700 };
+    SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
+    SDL_RenderFillRect(rdr,&rect0);
     SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
-    SDL_RenderCopy(rdr, texture, &rect1, &rect0);
+//    SDL_RenderCopy(rdr, texture, &rect1, &rect0);
     SDL_RenderDrawRect(rdr,&rect_th);
     SDL_RenderDrawRect(rdr,&rect0);
-    draw_font(font_4,set_time,550,230,color_2);
+    draw_font(font_4,set_time,550,330,color_2);
     draw_font(font_3,"取消",687,514,color_2);
     SDL_RenderPresent(rdr);
 
