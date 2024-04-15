@@ -10,6 +10,7 @@
 //从main.cpp文件中获取相应月份的日期排布
 extern char *days[42];
 char *year, *month;
+void change_days(int choice);
 
 //渲染日历表格,星期和年月的函数
 void draw_background();
@@ -59,12 +60,17 @@ void main_0();
 char *text_input(int x, int y, int choice);//y参数是文字显示的纵坐标,choice参数是年月的选择,1为输入年份,2为输入月份.
 
 //记录日程函数
-char *journal_record();
+char *journal_record(int choice,int i);
 SDL_Rect rect_1{1080, 120, 150, 70};
 SDL_Rect rect_2{1260, 120, 150, 70};
 char *time_0 = "";
 char *journal = "";
-char *title = "";
+char *title_0 = "";
+int times = 0;
+char *time_1 = "";
+char *title_1 = "";
+char *time_2 = "";
+char *title_2 = "";
 
 //渲染窗口背景函数
 void draw_img();
@@ -76,7 +82,7 @@ void preload_img_texture(char *file);
 void cleanup_img_texture();
 
 //渲染具体日志函数
-void draw_journal();
+void draw_journal(int i);
 
 //监听窗口函数,主要用于一些弹窗,临时渲染的监听.
 void event_loop();
@@ -99,13 +105,14 @@ int judge = 0;
 char set_time[80];
 
 //设置闹钟函数,设置闹钟时间
-void setalarm();
+void setalarm(int choice,int i);
 
 //删除闹钟函数
 void delete_alarm();
 
 //闹钟弹窗函数,到了设置时间,出现响铃的弹窗
-void small_window();
+void small_window_1();
+void small_window_2(int xy);
 
 //现行函数(将部分函数封装,便于避免bug和修改),通过调用其他功能函数,实现查询输入.
 void advance() {
@@ -124,6 +131,7 @@ void main_0() {
 
     deinit();
 }
+
 
 //窗口初始化
 void initgraph() {
@@ -166,11 +174,7 @@ void initgraph() {
         printf("ttf_font_error: %s", TTF_GetError());
 
     }
-
-    //
-
 }
-
 
 //渲染整体主窗口函数
 void draw_background() {
@@ -191,10 +195,10 @@ void draw_background() {
     //3.渲染文字
     char *week[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     char header[20];
-    sprintf(header, "%s年    %s月", year, month);
+    sprintf(header, "< %s年 >   < %s月 >", year, month);
 
     //3.1渲染年月
-    draw_font(font_1, header, 380, 30, color_1);
+    draw_font(font_1, header, 260, 30, color_1);
     SDL_RenderDrawLine(rdr, 1049, 0, 1049, 100);
     SDL_RenderDrawLine(rdr, 1049, 100, 1440, 100);
     SDL_RenderDrawRect(rdr, &rect_1);
@@ -212,12 +216,33 @@ void draw_background() {
     draw_font(font_2, "设置闹钟    删除闹钟", 1100, 540, color_1);
     SDL_RenderDrawRect(rdr, &rect_one);
     SDL_RenderDrawRect(rdr, &rect_tow);
-    if (strlen(journal) >= 4) {
-        SDL_Rect rect{1049, 199, 391, 102};
-        SDL_RenderDrawRect(rdr, &rect);
-        draw_font(font_3, time_0, 1097, 210, color_1);
-        draw_font(font_2, title, 1130, 260, color_1);
+    switch (1) {
+        case 1:{
+            if (times == 0) break;
+            SDL_Rect rect{1049, 199, 391, 102};
+            SDL_RenderDrawRect(rdr, &rect);
+            draw_font(font_3, time_0, 1097, 210, color_1);
+            draw_font(font_2, title_0, 1130, 260, color_1);
+            if (times == 1) break;
     }
+        case 2:{
+            SDL_Rect rect{1049, 299, 391, 102};
+            SDL_RenderDrawRect(rdr, &rect);
+            draw_font(font_3, time_1, 1097, 310, color_1);
+            draw_font(font_2, title_1, 1130, 360, color_1);
+            if (times == 2) break;
+        }
+        case 3:{
+            SDL_Rect rect{1049, 399, 391, 102};
+            SDL_RenderDrawRect(rdr, &rect);
+            draw_font(font_3, time_2, 1097, 410, color_1);
+            draw_font(font_2, title_2, 1130, 460, color_1);
+            break;
+        }
+}
+
+
+
     if (judge) {
         SDL_Rect rect{1049, 599, 391, 102};
         SDL_RenderDrawRect(rdr, &rect);
@@ -249,12 +274,26 @@ int core() {
                     //鼠标点击次数event.button.clicks
                     pt = {event.button.x, event.button.y};
                     SDL_Rect rect{1049, 199, 391, 102};
+                    SDL_Rect rect5{1049, 299, 391, 102};
+                    SDL_Rect rect6{1049, 399, 391, 102};
+                    SDL_Rect rect1{260, 30, 40, 40};
+                    SDL_Rect rect2{540, 30, 40, 40};
+                    SDL_Rect rect3{630, 30, 40, 40};
+                    SDL_Rect rect4{820, 30, 40, 40};
+                    SDL_Rect rectmain{0, 200, 1050, 600};
                     if (SDL_PointInRect(&pt, &rect_1)) {
-                        journal = journal_record();
-
-                    } else if (SDL_PointInRect(&pt, &rect) && strlen(journal) >= 4) {
-                        draw_journal();
-                    } else if (SDL_PointInRect(&pt, &rect_2) && strlen(journal) >= 4) {
+                        if(times == 0) journal_record(1,1);
+                        else if(times == 1) journal_record(1,1);
+                        else if (times>=2) journal_record(1,1);
+                    } else if (SDL_PointInRect(&pt, &rect) && times >= 1) {
+                        draw_journal(1);
+                    }
+                    else if (SDL_PointInRect(&pt, &rect5) && times >= 2) {
+                        draw_journal(2);
+                    }
+                    else if (SDL_PointInRect(&pt, &rect6) && times >= 3) {
+                        draw_journal(3);
+                    } else if (SDL_PointInRect(&pt, &rect_2) && times >= 1) {
                         //3.设置渲染颜色
                         SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
                         //4.清除屏幕(渲染屏幕背景)
@@ -263,10 +302,29 @@ int core() {
                         int x, y;
                         x = atoi(text_input(650, 0, 5));
                         y = atoi(text_input(580, 70, 6));
-                        deleteLineFromFile("journal.txt", x, y);
-                    } else if (SDL_PointInRect(&pt, &rect_one)) {
-                        setalarm();
-                    } else if (SDL_PointInRect(&pt, &rect_tow)) {
+                        if(times == 1) deleteLineFromFile("journal.txt", x, y);
+                        else if(times == 2) deleteLineFromFile("j1.txt", x, y);
+                        else if (times>=3) deleteLineFromFile("j2.txt", x, y);
+                    } else if (SDL_PointInRect(&pt, &rect1)) {
+                        change_days(1);
+                    }
+                    else if (SDL_PointInRect(&pt, &rect2)) {
+                        change_days(2);
+                    }
+                    else if (SDL_PointInRect(&pt, &rect3)) {
+                        change_days(3);
+                    }
+                    else if (SDL_PointInRect(&pt, &rect4)) {
+                        change_days(4);
+                    }
+                    else if (SDL_PointInRect(&pt, &rectmain)) {
+                        int xy = (int)event.button.x/150 + (int)((event.button.y-200)/100)*7;
+                        small_window_2(xy);
+                    }
+                    else if (SDL_PointInRect(&pt, &rect_one)) {
+                        setalarm(1,1);
+                    }
+                    else if (SDL_PointInRect(&pt, &rect_tow)) {
                         delete_alarm();
                     }
                     goto skip;
@@ -329,7 +387,7 @@ void play_wav() {
 
     //2.定义播放回调函数
     audio_spec.callback = callback;
-    small_window();
+    small_window_1();
 
 
     //3.打开音频设备
@@ -449,27 +507,107 @@ char *text_input(int x, int y, int choice) {
     }
 }
 
-int times = 1;
+
 //日记记录函数的定义,将输入的文本内容写入日记文件
-char *journal_record() {
+char *journal_record(int choice,int i) {
     //1.渲染背景
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
     SDL_RenderClear(rdr);
     draw_img();
     SDL_RenderPresent(rdr);
+    FILE *file;
+    char*result = (char*)malloc(strlen(year) + strlen(month) + 15);;
     //打开文件记录日志
-    FILE *file = fopen("journal.txt", "a+");
+    if (times == 0) {
+        file = fopen("journal.txt", "a+");
+    } else if(times == 1)
+    {
+        file = fopen("j1.txt", "a+");
+    }
+    else if(times >= 2)
+    {
+        file = fopen("j2.txt", "a+");
+    }
     if (file == NULL) {
         printf("Failed to open file.\n");
     }
-
+    int x = times;
+    if(x == 0)
+    {
+        if (choice == 1){
+            time_0 = text_input(520, 0, 3);
+            title_0 = text_input(330, 70, 4);
+            fprintf(file, "时间:%s\n",time_0);
+            times++;
+            fprintf(file, "标题:%s\n", title_0);
+        }
+        else if (choice == 2){
+            strcpy(result, year);
+            strcat(result, "年 ");
+            strcat(result, month);
+            strcat(result, "月 ");
+            strcat(result, days[i]);
+            strcat(result, "日");
+            strcat(result, "\0");
+            title_0 = text_input(330, 76, 4);
+            time_0 = result;
+            fprintf(file, "时间:%s\n", result);
+            times++;
+            fprintf(file, "标题:%s\n", title_0);
+        }
+    }
+    if(x == 1)
+    {
+        if (choice == 1){
+            time_1 = text_input(520, 0, 3);
+            title_1 = text_input(330, 70, 4);
+            fprintf(file, "时间:%s\n",time_1);
+            times++;
+            fprintf(file, "标题:%s\n", title_1);
+        }
+        else if (choice == 2){
+            strcpy(result, year);
+            strcat(result, "年 ");
+            strcat(result, month);
+            strcat(result, "月 ");
+            strcat(result, days[i]);
+            strcat(result, "日");
+            strcat(result, "\0");
+            title_1 = text_input(330, 76, 4);
+            time_1 = result;
+            fprintf(file, "时间:%s\n", result);
+            times++;
+            fprintf(file, "标题:%s\n", title_1);
+        }
+    }
+    if(x >= 2)
+    {
+        if (choice == 1){
+            time_2 = text_input(520, 0, 3);
+            title_2 = text_input(330, 70, 4);
+            fprintf(file, "时间:%s\n",time_2);
+            times++;
+            fprintf(file, "标题:%s\n", title_2);
+        }
+        else if (choice == 2){
+            strcpy(result, year);
+            strcat(result, "年 ");
+            strcat(result, month);
+            strcat(result, "月 ");
+            strcat(result, days[i]);
+            strcat(result, "日");
+            strcat(result, "\0");
+            title_2 = text_input(330, 76, 4);
+            time_2 = result;
+            fprintf(file, "时间:%s\n", result);
+            times++;
+            fprintf(file, "标题:%s\n", title_2);
+        }
+    }
     //2.记录时间与标题
-    time_0 = text_input(520, 0, 3);
-    title = text_input(330, 70, 4);
-    fprintf(file, "%d.时间:%s\n", times,time_0);
-    times++;
-    fprintf(file, "标题:%s\n", title);
-    //3.重新渲染背景进行输入
+
+
+    //3.重新渲染背景进行内容输入
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
     SDL_RenderClear(rdr);
     draw_img();
@@ -568,8 +706,11 @@ void cleanup_img_texture() {
 }
 
 //渲染具体日记函数的定义,读取文件文本,将其渲染呈现
-void draw_journal() {
-    char *text = readEntireFile("journal.txt");
+void draw_journal(int i) {
+    char *text;
+    if (i == 1) text = readEntireFile("journal.txt");
+    else if (i == 2) text = readEntireFile("j1.txt");
+    else if (i>=3) text = readEntireFile("j2.txt");
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
     SDL_RenderClear(rdr);
     draw_img();
@@ -710,7 +851,7 @@ void *alarmClock(void *arg) {
 //设置闹钟函数的定义,此函数中创建了一个新线程,在主线程进行的同时可以判定时间播放闹钟
 //***重点***
 pthread_t tid;
-void setalarm() {
+void setalarm(int choice,int i) {
     //3.设置渲染颜色
     SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
 
@@ -722,11 +863,24 @@ void setalarm() {
     int year_1, month_1, day, hours, minutes;
 
     pthread_attr_t attr;
-    year_1 = atoi(text_input(320, 0, 7));
-    month_1 = atoi(text_input(320, 70, 8));
-    day = atoi(text_input(300, 140, 9));
-    hours = atoi(text_input(300, 210, 10));
-    minutes = atoi(text_input(300, 280, 11));
+    if (choice == 1)
+    {
+        year_1 = atoi(text_input(320, 0, 7));
+        month_1 = atoi(text_input(320, 70, 8));
+        day = atoi(text_input(300, 140, 9));
+        hours = atoi(text_input(300, 210, 10));
+        minutes = atoi(text_input(300, 280, 11));
+    }
+    if (choice == 2 )
+    {
+        year_1 = atoi(year);
+        month_1 = atoi(month);
+        day = atoi(days[i]);
+        hours = atoi(text_input(300, 210, 10));
+        minutes = atoi(text_input(300, 280, 11));
+
+    }
+
     struct tm alarmTime = {};
     alarmTime.tm_year = year_1 - 1900;
     alarmTime.tm_mon = month_1 - 1;
@@ -758,7 +912,7 @@ void delete_alarm()
     pthread_cancel(tid);
 }
 
-void small_window()
+void small_window_1()
 {
 //以下注释内容为渲染弹窗背景内容,没有好的想法,暂时搁置,弹窗还是用简约风
 //    SDL_Surface* surface = IMG_Load("alarm.jpg");
@@ -783,3 +937,48 @@ void small_window()
     SDL_RenderPresent(rdr);
 
 }
+
+void small_window_2(int xy) {
+    SDL_Rect rect0 = {520, 200, 400, 400};
+    SDL_Rect rect1 = {637, 236, 160, 80};
+    SDL_Rect rect2 = {637, 466, 160, 80};
+    SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
+    SDL_RenderFillRect(rdr, &rect0);
+    SDL_SetRenderDrawColor(rdr, 255, 0, 0, 255);
+//    SDL_RenderCopy(rdr, texture, &rect1, &rect0);
+    SDL_RenderDrawRect(rdr, &rect2);
+    SDL_RenderDrawRect(rdr, &rect1);
+    SDL_RenderDrawRect(rdr, &rect0);
+    draw_font(font_1, "日志", 650, 240, color_1);
+    draw_font(font_1, "or", 690, 350, color_1);
+    draw_font(font_1, "闹钟", 650, 480, color_1);
+    SDL_RenderPresent(rdr);
+    SDL_Event event;
+    SDL_Point pt;
+    while (1) {
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+                //监听退出事件
+                case SDL_QUIT:
+                    return;
+                case SDL_KEYDOWN:
+                    if (event.key.keysym.sym == 1073741912) return;
+                case SDL_MOUSEBUTTONDOWN:
+                    pt = {event.button.x, event.button.y};
+                    if (SDL_PointInRect(&pt, &rect1)) {
+                        if(times == 0) journal_record(2,xy);
+                        else if(times == 1) journal_record(2,xy);
+                        else if (times>=2) journal_record(2,xy);
+                        return;
+                    }
+                    if (SDL_PointInRect(&pt, &rect2)) {
+                        setalarm(2,xy);
+                        return;
+                    }
+            }
+        }
+    }
+}
+
+
+
