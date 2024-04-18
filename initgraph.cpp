@@ -114,6 +114,8 @@ void delete_alarm();
 void small_window_1();
 void small_window_2(int xy);
 
+void del();
+
 //现行函数(将部分函数封装,便于避免bug和修改),通过调用其他功能函数,实现查询输入.
 void advance() {
     initgraph();
@@ -251,7 +253,9 @@ void draw_background() {
 
 }
 
-
+int dj1 = 0;
+int dj2 = 0;
+int dj3 = 0;
 //事件监听函数的定义
 int core() {
     SDL_Event event;
@@ -286,25 +290,29 @@ int core() {
                         else if(times == 1) journal_record(1,1);
                         else if (times>=2) journal_record(1,1);
                     } else if (SDL_PointInRect(&pt, &rect) && times >= 1) {
-                        draw_journal(1);
+                        if (dj1 == 0) draw_journal(1);
+                        else if (dj1 == 1) draw_journal(2);
+                        else if (dj1 == 2) draw_journal(3);
                     }
                     else if (SDL_PointInRect(&pt, &rect5) && times >= 2) {
-                        draw_journal(2);
+                        if (dj2 == 0) draw_journal(2);
+                        else if (dj2 == 1) draw_journal(3);
                     }
                     else if (SDL_PointInRect(&pt, &rect6) && times >= 3) {
                         draw_journal(3);
                     } else if (SDL_PointInRect(&pt, &rect_2) && times >= 1) {
+                        del();
                         //3.设置渲染颜色
-                        SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
-                        //4.清除屏幕(渲染屏幕背景)
-                        SDL_RenderClear(rdr);
-                        SDL_RenderPresent(rdr);
-                        int x, y;
-                        x = atoi(text_input(650, 0, 5));
-                        y = atoi(text_input(580, 70, 6));
-                        if(times == 1) deleteLineFromFile("journal.txt", x, y);
-                        else if(times == 2) deleteLineFromFile("j1.txt", x, y);
-                        else if (times>=3) deleteLineFromFile("j2.txt", x, y);
+//                        SDL_SetRenderDrawColor(rdr, 255, 255, 255, 255);
+//                        //4.清除屏幕(渲染屏幕背景)
+//                        SDL_RenderClear(rdr);
+//                        SDL_RenderPresent(rdr);
+//                        int x, y;
+//                        x = atoi(text_input(650, 0, 5));
+//                        y = atoi(text_input(580, 70, 6));
+//                        if(times == 1) deleteLineFromFile("journal.txt", x, y);
+//                        else if(times == 2) deleteLineFromFile("j1.txt", x, y);
+//                        else if (times>=3) deleteLineFromFile("j2.txt", x, y);
                     } else if (SDL_PointInRect(&pt, &rect1)) {
                         change_days(1);
                     }
@@ -347,7 +355,9 @@ int core() {
 //销毁缓存
 void deinit() {
 
-
+    deleteLineFromFile("j1.txt", 1, 10);
+    deleteLineFromFile("j2.txt", 1, 10);
+    deleteLineFromFile("journal.txt", 1, 10);
     cleanup_img_texture();
     SDL_FreeSurface(txt_surf);
     SDL_DestroyTexture(txt_texture);
@@ -507,7 +517,7 @@ char *text_input(int x, int y, int choice) {
     }
 }
 
-
+int record_time = 0;
 //日记记录函数的定义,将输入的文本内容写入日记文件
 char *journal_record(int choice,int i) {
     //1.渲染背景
@@ -520,9 +530,11 @@ char *journal_record(int choice,int i) {
     //打开文件记录日志
     if (times == 0) {
         file = fopen("journal.txt", "a+");
+        dj1 = 0;
     } else if(times == 1)
     {
         file = fopen("j1.txt", "a+");
+        dj2 = 0;
     }
     else if(times >= 2)
     {
@@ -539,6 +551,7 @@ char *journal_record(int choice,int i) {
             title_0 = text_input(330, 70, 4);
             fprintf(file, "时间:%s\n",time_0);
             times++;
+            record_time++;
             fprintf(file, "标题:%s\n", title_0);
         }
         else if (choice == 2){
@@ -553,6 +566,7 @@ char *journal_record(int choice,int i) {
             time_0 = result;
             fprintf(file, "时间:%s\n", result);
             times++;
+            record_time++;
             fprintf(file, "标题:%s\n", title_0);
         }
     }
@@ -563,6 +577,7 @@ char *journal_record(int choice,int i) {
             title_1 = text_input(330, 70, 4);
             fprintf(file, "时间:%s\n",time_1);
             times++;
+            record_time++;
             fprintf(file, "标题:%s\n", title_1);
         }
         else if (choice == 2){
@@ -577,6 +592,7 @@ char *journal_record(int choice,int i) {
             time_1 = result;
             fprintf(file, "时间:%s\n", result);
             times++;
+            record_time++;
             fprintf(file, "标题:%s\n", title_1);
         }
     }
@@ -587,6 +603,7 @@ char *journal_record(int choice,int i) {
             title_2 = text_input(330, 70, 4);
             fprintf(file, "时间:%s\n",time_2);
             times++;
+            record_time++;
             fprintf(file, "标题:%s\n", title_2);
         }
         else if (choice == 2){
@@ -601,6 +618,7 @@ char *journal_record(int choice,int i) {
             time_2 = result;
             fprintf(file, "时间:%s\n", result);
             times++;
+            record_time++;
             fprintf(file, "标题:%s\n", title_2);
         }
     }
@@ -980,5 +998,95 @@ void small_window_2(int xy) {
     }
 }
 
+void del()
+{
+    SDL_SetRenderDrawColor(rdr, 0, 0, 0, 255);
+    switch (1) {
+        case 1:
+            SDL_RenderDrawLine(rdr,1400,205,1420,225);
+            SDL_RenderDrawLine(rdr,1400,225,1420,205);
+            if (times == 1) break;
+        case 2:
+            SDL_RenderDrawLine(rdr,1400,305,1420,325);
+            SDL_RenderDrawLine(rdr,1400,325,1420,305);
+            if (times == 2) break;
+        case 3:
+            SDL_RenderDrawLine(rdr,1400,405,1420,425);
+            SDL_RenderDrawLine(rdr,1400,425,1420,405);
+    }
+    SDL_RenderPresent(rdr);
+    SDL_Rect rect1 = {1400,205,20,20};
+    SDL_Rect rect2 = {1400,305,20,20};
+    SDL_Rect rect3 = {1400,405,20,20};
+    SDL_Event event;
+    SDL_Point pt;
+    while (1) {
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+                //监听退出事件
+                case SDL_QUIT:
+                    return;
+
+                case SDL_MOUSEBUTTONDOWN:
+                    pt = {event.button.x, event.button.y};
+                    if (SDL_PointInRect(&pt, &rect3)) {
+                        if (times >=3 ) {
+                            times = 2;
+                            deleteLineFromFile("j2.txt", 1, 5);
+                        }
+                    } else if (SDL_PointInRect(&pt, &rect2)){
+                        if (times == 2) {
+                            times--;
+                            if (record_time - times == 2) {
+                                deleteLineFromFile("j2.txt", 1, 5);
+                            }
+                            else deleteLineFromFile("j1.txt", 1, 5);
+                        }
+                        else if (times >= 3) {
+                            deleteLineFromFile("j1.txt", 1, 5);
+                            times--;
+                            dj2 = 1;
+                            strcpy(time_1,time_2);
+                            strcpy(title_1,title_2);
+                        }
+                    }else if (SDL_PointInRect(&pt, &rect1)){
+                        if (times == 1) {
+                            times--;
+                            deleteLineFromFile("journal.txt", 1, 5);
+                            if (record_time - times == 3) {
+                                deleteLineFromFile("j2.txt", 1, 5);
+                            }
+                        }
+                        else if (times == 2)
+                        {
+                            times--;
+                            deleteLineFromFile("journal.txt", 1, 5);
+                            dj1 = 1;
+                            strcpy(time_0,time_1);
+                            strcpy(title_0,title_1);
+                            if (record_time - times == 2) {
+                                dj1 = 2;
+                                deleteLineFromFile("j1.txt", 1, 5);
+                            }
+
+                        }
+                        else if (times >= 3){
+                            times = 2;
+                            deleteLineFromFile("journal.txt", 1, 5);
+                            dj1 = 1;
+                            dj2 = 1;
+                            strcpy(time_0,time_1);
+                            strcpy(title_0,title_1);
+                            strcpy(time_1,time_2);
+                            strcpy(title_1,title_2);
+                        }
+
+                    }return;
+            }
+        }
+
+    }
+
+}
 
 
